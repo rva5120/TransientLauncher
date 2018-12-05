@@ -6,10 +6,15 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 
 /*
@@ -19,8 +24,10 @@ Description     API to enable system settings or launchers to enforce applicatio
 Requirements    This class requires root privileges. To soften this requirement, make this application
                 owner the system. This will allow you to modify the code where, instead of using a sudo
                 shell, you can replace the shell commands with java code to perform similar operations.
+
+Notes           Class and methods here are public, in order to be reachable outside of the package.
  */
-class TransiencyManager {
+public class TransiencyManager {
 
     /** Attributes **/
     private PackageManager packageManager;
@@ -43,10 +50,10 @@ class TransiencyManager {
 
     /** Methods **/
     /*
-    Name            getLaunchableApps
-    Description     Returns a list of AppMetadata objects of launchable apps
+    Name                getLaunchableApps
+    Description         Returns a list of AppMetadata objects of launchable apps and add them to the DB
      */
-    public List<AppMetadata> getLaunchableApps() {
+    public List<AppMetadata> getLaunchableAppsAndLoadDb() {
 
         // Define an intent with the MAIN action and LAUNCHER category
         Intent i = new Intent(Intent.ACTION_MAIN, null);
@@ -72,9 +79,14 @@ class TransiencyManager {
                 tran = Boolean.FALSE;
             }
 
+            // Create the app object
             AppMetadata app = new AppMetadata(name, packageName, Boolean.TRUE, tran);
 
+            // Save the app object to the list
             apps.add(app);
+
+            // Add the app to the DB
+            database.insertApp(app);
         }
 
         // Return the list
@@ -84,20 +96,26 @@ class TransiencyManager {
 
 
     /*
-    Name            isAppEnabled
-    Description     Returns TRUE if the enabled flag is set in the DB for a given app
+    Name                isAppEnabled
+    Description         Returns TRUE if the enabled flag is set in the DB for a given app
      */
     public Boolean isAppDisabled(String packageName) {
 
         // Check if the app is enabled in the DB
-        return Boolean.TRUE;
+        Boolean enabled = database.enabledFlag(packageName);
+
+        if (enabled) {
+            return Boolean.FALSE;
+        } else {
+            return Boolean.TRUE;
+        }
     }
 
 
 
     /*
-    Name            enableApp
-    Description     Enables an app (enable: make APK file accessible to the system)
+    Name                enableApp
+    Description         Enables an app and updates DB flag (enable: make APK file accessible to the system)
      */
     public Boolean enableApp(String packageName) {
 
@@ -175,8 +193,8 @@ class TransiencyManager {
 
 
     /*
-    Name            disableApp
-    Description     Disables an app (disable: make APK file inaccessible to the system)
+    Name                disableApp
+    Description         Disables an app and updates DB flag (disable: make APK file inaccessible to the system)
      */
     public Boolean disableApp(String packageName) {
 
@@ -253,8 +271,8 @@ class TransiencyManager {
 
 
     /*
-    Name            setAppEnabled
-    Description     Sets the enabled flag to TRUE in the database for a given app
+    Name                setAppEnabled
+    Description         Sets the enabled flag to TRUE in the database for a given app
      */
     private void setAppEnabled(String packageName) {
 
@@ -265,13 +283,87 @@ class TransiencyManager {
 
 
     /*
-    Name            setAppDisabled
-    Description     Sets the enabled flag to FALSE in the database for a given app
+    Name                setAppDisabled
+    Description         Sets the enabled flag to FALSE in the database for a given app
      */
     private void setAppDisabled(String packageName) {
 
         // Update the database
-        database.updateAppEnable(packageName, Boolean.FALSE);
+        database.updateAppEnabled(packageName, Boolean.FALSE);
     }
 
+
+
+    /*
+    Name                getRunningPackages
+    Description         Returns a list of strings of package names of running packages.
+     */
+    private List<String> getRunningPackages() {
+
+        // Setup a list
+        ArrayList<String> runningPackages = new ArrayList<>();
+
+        // Execute the process status command to get a list of running packages
+        Process process;
+        try {
+
+            // Setup the process to execute ps
+            process = Runtime.getRuntime().exec("ps --name com");
+
+            // Setup the Input Stream Reader to receive the results of the ps command
+            BufferedReader results = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            // Setup regex pattern to get the package name for each running process
+            Pattern packageStructure = Pattern.compile("com\\.[a-z,0-9]*\\.[a-z,0-9]*\\.[a-z,0-9]*");
+            Matcher matcher;
+
+            // Read the buffer with the results line by line
+            String line;
+            while((line = results.readLine()) != null) {
+
+                // Find the matching strings to our patters
+                matcher = packageStructure.matcher(line);
+
+                // Save the matching package name
+                if (matcher.find()) {
+
+                    // Get the package name
+                    line = matcher.group(0);
+
+                    // Save the package name
+                    runningPackages.add(line);
+
+                    Log.d(LOG_TAG, "** INFO **   " + line + " is running");
+                } else {
+                    Log.d(LOG_TAG, "** INFO **   NON-MATCH - " + line + " is also running...");
+                }
+            }
+
+            // Close the stream
+            results.close();
+
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "* ERROR *   Error IO Exception getting running packages!!");
+            e.printStackTrace();
+        }
+
+        // Return the list of running packages
+        return runningPackages;
+    }
+
+
+
+    /*
+    Name                isAppRunning
+    Description         Checks if the app is running, using the "ps" command
+     */
+    public Boolean isAppRunning(String packageName) {
+
+        // Get list of running apps
+        ArrayList<String> runningPackages = new ArrayList<>();
+        runningPackages.addAll(getRunningPackages());
+
+        // Check to see if this package is running
+        return runningPackages.contains(packageName);
+    }
 }

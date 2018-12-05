@@ -5,6 +5,12 @@ import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
+
+
+/*
+Class           App Metadata
+Description     Definition of the metadata of an app. Used as the entry definition for the database.
+ */
 @Entity(tableName = "apps_table")
 class AppMetadata {
 
@@ -25,7 +31,7 @@ class AppMetadata {
 
 
     // Constructor
-    public AppMetadata(String appName, @NonNull String packageName, Boolean enabledApp, Boolean transientApp) {
+    AppMetadata(String appName, @NonNull String packageName, Boolean enabledApp, Boolean transientApp) {
         this.appName = appName;
         this.packageName = packageName;
         this.enabledApp = enabledApp;
@@ -34,29 +40,29 @@ class AppMetadata {
 
 
     // Methods
-    public String getAppName() {
+    String getAppName() {
         return this.appName;
     }
-    public String getPackageName() {
+    String getPackageName() {
         return this.packageName;
     }
-    public Boolean getEnabledApp() {
+    Boolean getEnabledApp() {
         return this.enabledApp;
     }
-    public Boolean getTransientApp() {
+    Boolean getTransientApp() {
         return this.transientApp;
     }
 
-    public void setAppName(String name) {
+    void setAppName(String name) {
         this.appName = name;
     }
-    public void setPackageName(String package_name) {
+    void setPackageName(String package_name) {
         this.packageName = package_name;
     }
-    public void setEnabledApp(Boolean en) {
+    void setEnabledApp(Boolean en) {
         this.enabledApp = en;
     }
-    public void setTransientApp(Boolean tr) {
+    void setTransientApp(Boolean tr) {
         this.transientApp = tr;
     }
 }
