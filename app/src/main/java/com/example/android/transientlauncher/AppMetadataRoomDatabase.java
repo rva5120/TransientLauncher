@@ -32,6 +32,8 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
     private static Boolean recordBooleanResult;
     private static final String LOG_TAG = AppMetadataRoomDatabase.class.getSimpleName();
 
+    private final Boolean DEMO_MODE = Boolean.TRUE;
+
     // Room Callback
     private static RoomDatabase.Callback sRoomDatabaseCallback = new RoomDatabase.Callback() {
         @Override
@@ -251,8 +253,12 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
     */
     void deleteDb() {
 
-        // Delete all entries
-        new DeleteDbAsync(INSTANCE).execute();
+        if (DEMO_MODE) {
+            INSTANCE.appMetadataDao().deleteAll();
+        } else {
+            // Delete all entries
+            new DeleteDbAsync(INSTANCE).execute();
+        }
     }
 
 
@@ -265,8 +271,12 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
         // List to store retrieved apps
         List<AppMetadata> list = new ArrayList<>();
 
-        // Get values from the DB and store them in the list
-        new GetAllAppsFromDbAsync(list, INSTANCE).execute();
+        if (DEMO_MODE) {
+            list = INSTANCE.appMetadataDao().getAllApps();
+        } else {
+            // Get values from the DB and store them in the list
+            new GetAllAppsFromDbAsync(list, INSTANCE).execute();
+        }
 
         return list;
     }
@@ -278,8 +288,12 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
      */
     void insertApp(AppMetadata app) {
 
-        // Insert app
-        new InsertAppToDbAsync(app, INSTANCE).execute();
+        if (DEMO_MODE) {
+            // Insert app
+            new InsertAppToDbAsync(app, INSTANCE).execute();
+        } else {
+            INSTANCE.appMetadataDao().insert(app);
+        }
     }
 
 
@@ -289,8 +303,12 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
      */
     Boolean isEmpty() {
 
-        // Get current record count (updates recordCount)
-        new RecordCountDbAsync(INSTANCE).execute();
+        if (DEMO_MODE) {
+            recordCount = INSTANCE.appMetadataDao().recordCount();
+        } else {
+            // Get current record count (updates recordCount)
+            new RecordCountDbAsync(INSTANCE).execute();
+        }
 
         if (recordCount > 0) {
             return Boolean.FALSE;
@@ -301,13 +319,33 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
 
 
     /*
+    Name                recordCount
+    Description         Returns the number of records in the database
+     */
+    int getRecordCount() {
+
+        if (DEMO_MODE) {
+            recordCount = INSTANCE.appMetadataDao().recordCount();
+        } else {
+            // Get current record count (updates recordCount)
+            new RecordCountDbAsync(INSTANCE).execute();
+        }
+        return recordCount;
+    }
+
+
+    /*
     Name                updateAppEnabled
     Description         Updates an app record's enabled flag accordingly in the DB
      */
     void updateAppEnabled(String packageName, Boolean flag) {
 
-        // Update the enabled flag
-        new UpdateRecordFieldDbAsync(INSTANCE, packageName, "enabledApp", flag).execute();
+        if (DEMO_MODE) {
+            INSTANCE.appMetadataDao().updateEnableField(packageName, flag);
+        } else {
+            // Update the enabled flag
+            new UpdateRecordFieldDbAsync(INSTANCE, packageName, "enabledApp", flag).execute();
+        }
     }
 
 
@@ -317,8 +355,13 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
      */
     Boolean enabledFlag(String packageName) {
 
-        // Check the enabled flag (updates recordResult)
-        new GetRecordFieldDbAsync(INSTANCE, packageName, "enabledApp").execute();
+        if (DEMO_MODE) {
+            recordBooleanResult = INSTANCE.appMetadataDao().getBooleanRecordField(packageName, "enabledApp");
+        } else {
+            // Check the enabled flag (updates recordResult)
+            new GetRecordFieldDbAsync(INSTANCE, packageName, "enabledApp").execute();
+        }
+
         return recordBooleanResult;
     }
 }

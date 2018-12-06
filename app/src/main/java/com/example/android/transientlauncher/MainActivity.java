@@ -21,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
     /** Attributes **/
     // Modes and Flags
     private final Boolean DEMO_MODE = Boolean.TRUE;
-    private final String LOG_TAG = "TransientLauncher/Main";
+    private final String LOG_TAG = MainActivity.class.getSimpleName();
 
     // Managers and Databases
     private PackageManager packageManager;
@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Instantiate Transiency Manager
         transiencyManager = new TransiencyManager(packageManager, database);
+
     }
 
     @Override
@@ -124,8 +125,12 @@ public class MainActivity extends AppCompatActivity {
         appList = new ArrayList<>();
         if (database.isEmpty()) {
 
+            Log.d(LOG_TAG, "** INFO **    Database is empty, so we are filling it up...");
+
             // Get launchable apps from PM and load the DB
             appList.addAll(transiencyManager.getLaunchableAppsAndLoadDb());
+
+            Log.d(LOG_TAG, "** DEBUG ** DATABASE SHOULD NOW HAVE 2 ITEMS... " + database.getRecordCount());
 
             // Since this is the first time that the launcher is used, disable apps that are not running
             Boolean disable_success;
@@ -133,12 +138,15 @@ public class MainActivity extends AppCompatActivity {
 
                 // Get the app metadata
                 AppMetadata app = appList.get(pos);
+                Log.d(LOG_TAG, "** DEBUG **    Disable? " + app.getAppName() + " -- Transient? " + app.getTransientApp());
 
                 // Disable transient apps that are not running
-                if (app.getTransientApp() && transiencyManager.isAppRunning(app.getPackageName())) {
+                if (app.getTransientApp() == Boolean.TRUE && transiencyManager.isAppRunning(app.getPackageName()) == Boolean.FALSE) {
                     disable_success = transiencyManager.disableApp(app.getPackageName());
                     if (disable_success) {
                         app.setEnabledApp(Boolean.FALSE);
+                        Toast.makeText(MainActivity.this, "Disabled " + app.getAppName(), Toast.LENGTH_LONG).show();
+                        Log.d(LOG_TAG, "** INFO **    Disabled " + app.getAppName());
                     } else {
                         Toast.makeText(MainActivity.this, "Error Disabling App! Exiting Launcher...", Toast.LENGTH_LONG).show();
                         Log.e(LOG_TAG, "* ERROR *   Couldn't disable " + app.getAppName());

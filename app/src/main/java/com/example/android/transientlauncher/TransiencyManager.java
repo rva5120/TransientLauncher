@@ -32,11 +32,46 @@ public class TransiencyManager {
     /** Attributes **/
     private PackageManager packageManager;
     private AppMetadataRoomDatabase database;
-    private final String LOG_TAG = "TransiencyManager";
+    private final String LOG_TAG = TransiencyManager.class.getSimpleName();
 
     private final Boolean DEMO_MODE = Boolean.TRUE;
 
 
+
+
+    public Boolean execute_cmd () {
+
+        Process p;
+        try {
+            p = Runtime.getRuntime().exec("su");
+
+            DataOutputStream os = new DataOutputStream(p.getOutputStream());
+            os.writeBytes("echo \"Do I have root?\" >/data/app/com.example.android.hellotoast-1/temporary.txt\n");
+            //os.writeBytes("rm /data/app/com.example.android.hellotoast-1/base.apk > /sdcard/error.log\n");
+            //os.writeBytes("mv /data/app/com.instagram.android-1/base.apk /sdcard/instagram.apk\n");
+            //os.writeBytes("mv /sdcard/instagram.apk /data/app/com.instagram.android-1/base.apk\n");
+            //os.writeBytes("chmod u+rwx /data/app/com.instagram.android-1/base.apk\n");
+
+            os.writeBytes("exit\n");
+            os.flush();
+            try {
+                p.waitFor();
+                if (p.exitValue() != 255) {
+                    //Toast.makeText(activity_context.getApplicationContext()., "Root", Toast.LENGTH_LONG).show();
+                    return Boolean.TRUE;
+                } else {
+                    //Toast.makeText(MainActivity.this, "Not Root", Toast.LENGTH_LONG).show();
+                    return Boolean.FALSE;
+                }
+            } catch (InterruptedException e) {
+                //Toast.makeText(MainActivity.this, "Exception - Not Root", Toast.LENGTH_LONG).show();
+                return Boolean.FALSE;
+            }
+        } catch (IOException e) {
+            //Toast.makeText(MainActivity.this, "IOException - Not Root", Toast.LENGTH_LONG).show();
+            return Boolean.FALSE;
+        }
+    }
 
 
     /** Constructor **/
@@ -79,13 +114,15 @@ public class TransiencyManager {
             Boolean tran = Boolean.FALSE;
             if (DEMO_MODE) {
 
-                if (name.equals("com.example.android.hellotoast") || name.equals("com.facebook.katana")) {
+                Log.d(LOG_TAG, "** DEBUG **   Package name " + packageName);
+                if (packageName.equals("com.example.android.hellotoast") || packageName.equals("com.facebook.katana")) {
                     tran = Boolean.TRUE;
+                    Log.d(LOG_TAG, "** INFO **    " + packageName + " is transient!!");
                 }
 
             } else {
 
-                if (name.contains("com.google") || name.contains("com.android") || name.contains("transientlauncher")) {
+                if (packageName.contains("com.google") || packageName.contains("com.android") || packageName.contains("transientlauncher")) {
                     tran = Boolean.FALSE;
                 } else {
                     tran = Boolean.TRUE;
@@ -101,6 +138,7 @@ public class TransiencyManager {
 
             // Add the app to the DB
             database.insertApp(app);
+
         }
 
         // Return the list
@@ -216,6 +254,7 @@ public class TransiencyManager {
         PackageInfo packageInfo;
         try {
             packageInfo = packageManager.getPackageInfo(packageName, 0);
+            Log.d(LOG_TAG, "Package path: " + packageInfo.applicationInfo.dataDir);
         } catch (PackageManager.NameNotFoundException e) {
             Log.e(LOG_TAG, "NameNotFoundException - Error finding data path for " + packageName);
             return Boolean.FALSE;
