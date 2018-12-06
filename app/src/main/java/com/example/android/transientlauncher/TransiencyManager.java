@@ -34,6 +34,8 @@ public class TransiencyManager {
     private AppMetadataRoomDatabase database;
     private final String LOG_TAG = "TransiencyManager";
 
+    private final Boolean DEMO_MODE = Boolean.TRUE;
+
 
 
 
@@ -74,9 +76,21 @@ public class TransiencyManager {
             String packageName = resolveInfo.activityInfo.packageName;
 
             // For now... If the app contains the word "google" or "android" on it, is it not transient
-            Boolean tran = Boolean.TRUE;
-            if (name.contains("com.google") || name.contains("com.android") || name.contains("transientlauncher")) {
-                tran = Boolean.FALSE;
+            Boolean tran = Boolean.FALSE;
+            if (DEMO_MODE) {
+
+                if (name.equals("com.example.android.hellotoast") || name.equals("com.facebook.katana")) {
+                    tran = Boolean.TRUE;
+                }
+
+            } else {
+
+                if (name.contains("com.google") || name.contains("com.android") || name.contains("transientlauncher")) {
+                    tran = Boolean.FALSE;
+                } else {
+                    tran = Boolean.TRUE;
+                }
+
             }
 
             // Create the app object
