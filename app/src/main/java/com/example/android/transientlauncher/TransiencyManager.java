@@ -189,8 +189,9 @@ public class TransiencyManager {
             // Setup a pipe to send commands to the sudo shell
             DataOutputStream outputStream = new DataOutputStream(process.getOutputStream());
 
-            // Get the path to the data folder for this package
-            String packageDirectory = packageInfo.applicationInfo.dataDir;
+            // Get the path to the data folder for this package (remove base.apk from the path)
+            String packageDirectory = packageInfo.applicationInfo.sourceDir;
+            packageDirectory = packageDirectory.replace("base.apk", "");
 
             // Add Command -> Rename the dummy file to base.apk
             outputStream.writeBytes("mv " + packageDirectory + "/dummy " + packageDirectory + "/base.apk\n");
@@ -270,7 +271,8 @@ public class TransiencyManager {
             DataOutputStream outputStream = new DataOutputStream(process.getOutputStream());
 
             // Get the path to the data folder of this package
-            String packageDirectory = packageInfo.applicationInfo.dataDir;
+            String packageDirectory = packageInfo.applicationInfo.sourceDir;
+            packageDirectory = packageDirectory.replace("base.apk", "");
 
             // Add Command -> Rename the base.apk file to dummy
             outputStream.writeBytes("mv " + packageDirectory + "/base.apk " + packageDirectory + "/dummy\n");
