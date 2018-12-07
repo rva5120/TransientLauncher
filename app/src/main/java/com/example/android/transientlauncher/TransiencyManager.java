@@ -384,6 +384,8 @@ public class TransiencyManager {
         ArrayList<String> runningPackages = new ArrayList<>();
         runningPackages.addAll(getRunningPackages());
 
+        Log.d(LOG_TAG, "*** DEBUG ***   Is " + packageName + " running?? " + runningPackages.contains(packageName));
+
         // Check to see if this package is running
         return runningPackages.contains(packageName);
     }

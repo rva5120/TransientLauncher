@@ -22,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     // Modes and Flags
     private final Boolean DEMO_MODE = Boolean.TRUE;
     private final String LOG_TAG = MainActivity.class.getSimpleName();
+    private Boolean enabledAllSelected = Boolean.FALSE;
 
     // Managers and Databases
     private PackageManager packageManager;
@@ -109,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "** INFO **    onDestroy --> Disables all apps that are not running.");
 
         // DEMO MODE - Disable apps that are not running and are still enabled
-        if (DEMO_MODE) {
+        if (DEMO_MODE && enabledAllSelected == Boolean.FALSE) {
 
             for (AppMetadata app : appList) {
 
@@ -151,7 +152,6 @@ public class MainActivity extends AppCompatActivity {
             Log.d(LOG_TAG, "** INFO **    Database is empty, so we are filling it up...");
 
             // Get launchable apps from PM and load the DB
-            appList.clear();
             appList.addAll(transiencyManager.getLaunchableAppsAndLoadDb());
 
             Log.d(LOG_TAG, "** DEBUG ** DATABASE SHOULD NOW HAVE 2 ITEMS... " + database.getRecordCount());
@@ -186,14 +186,12 @@ public class MainActivity extends AppCompatActivity {
             // Add/Remove apps to/from the database
 
             // Load all (new and existing) apps to display to the user
-            appList.clear();
             appList.addAll(database.getAllApps());
 
             // Wait for the background DB process to be done...
         }
 
-        // Debug names... why is the package showing up instead for the transient apps?
-        appList.clear();
+        // Get the most up to date list from the DB
         appList.addAll(database.getAllApps());
 
     }
@@ -278,4 +276,27 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
+    /*
+    Name                enableAllApps
+    Description         Button handler to enable all apps (transiency mode off).
+     */
+    public void enableAllApps(View view) {
+
+        // Get updated app list
+        appList.clear();
+        appList.addAll(database.getAllApps());
+
+        // Enable all disabled apps
+        for (AppMetadata app: appList) {
+            if (app.getEnabledApp() == Boolean.FALSE) {
+                transiencyManager.enableApp(app.getPackageName());
+                app.setEnabledApp(Boolean.TRUE);
+                Toast.makeText(MainActivity.this, "Enabled " + app.getAppName(), Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        // Keep the apps enabled on Destroy!
+        enabledAllSelected = Boolean.TRUE;
+    }
 }

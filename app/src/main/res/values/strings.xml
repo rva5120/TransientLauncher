@@ -3,4 +3,5 @@
     <string name="icon_description">Image of app icon.</string>
     <string name="name_description">Name of the app.</string>
     <string name="package_name_description">Package name of the app.</string>
+    <string name="enable_all">Enable All</string>
 </resources>
