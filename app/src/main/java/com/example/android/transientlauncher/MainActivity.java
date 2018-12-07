@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(LOG_TAG, "** INFO **    onCreate --> Setting up PM, DB and TM.");
 
-        // Stop background process to check for closed apps
+        // TO DO [Stop background process to check for closed apps]
 
         // Set Package Manager
         packageManager = getPackageManager();
@@ -56,10 +56,12 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
     @Override
     protected void onStart() {
         super.onStart();
     }
+
 
     @Override
     protected void onResume() {
@@ -72,12 +74,33 @@ public class MainActivity extends AppCompatActivity {
         // Load apps from DB or PM on list, and disables closed apps if first time running
         loadAppsOnLocalList();
 
+        // DEMO MODE - Disable all apps that are not running.
+        if (DEMO_MODE) {
+            for(AppMetadata app: appList) {
+
+                // Disable apps that are transient, enabled and are not running right now (no process)
+                if (app.getTransientApp() && app.getEnabledApp() && transiencyManager.isAppRunning(app.getPackageName()) == Boolean.FALSE) {
+                    Boolean disable_success = transiencyManager.disableApp(app.getPackageName());
+                    if (disable_success) {
+                        app.setEnabledApp(Boolean.FALSE);
+                        Toast.makeText(MainActivity.this, "onResume: Disabled " + app.getAppName(), Toast.LENGTH_LONG).show();
+                        Log.d(LOG_TAG, "** INFO **    Disabled " + app.getAppName());
+                    } else {
+                        Toast.makeText(MainActivity.this, "onResume: Error Disabling App! Exiting Launcher...", Toast.LENGTH_LONG).show();
+                        Log.e(LOG_TAG, "* ERROR *   Couldn't disable " + app.getAppName());
+                        MainActivity.this.finish();
+                    }
+                }
+            }
+        }
+
         // Load list of apps on the ListView object
         loadAppsOnListView();
 
         // Listener to service user clicks
         addClickListener();
     }
+
 
     @Override
     protected void onDestroy() {
@@ -107,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Start the background process to listen for closing apps
+        // TO DO [Start the background process to listen for closing apps]
     }
 
 
@@ -128,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(LOG_TAG, "** INFO **    Database is empty, so we are filling it up...");
 
             // Get launchable apps from PM and load the DB
+            appList.clear();
             appList.addAll(transiencyManager.getLaunchableAppsAndLoadDb());
 
             Log.d(LOG_TAG, "** DEBUG ** DATABASE SHOULD NOW HAVE 2 ITEMS... " + database.getRecordCount());
@@ -162,10 +186,15 @@ public class MainActivity extends AppCompatActivity {
             // Add/Remove apps to/from the database
 
             // Load all (new and existing) apps to display to the user
+            appList.clear();
             appList.addAll(database.getAllApps());
 
             // Wait for the background DB process to be done...
         }
+
+        // Debug names... why is the package showing up instead for the transient apps?
+        appList.clear();
+        appList.addAll(database.getAllApps());
 
     }
 

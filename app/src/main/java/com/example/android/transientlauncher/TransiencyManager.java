@@ -39,41 +39,6 @@ public class TransiencyManager {
 
 
 
-    public Boolean execute_cmd () {
-
-        Process p;
-        try {
-            p = Runtime.getRuntime().exec("su");
-
-            DataOutputStream os = new DataOutputStream(p.getOutputStream());
-            os.writeBytes("echo \"Do I have root?\" >/data/app/com.example.android.hellotoast-1/temporary.txt\n");
-            //os.writeBytes("rm /data/app/com.example.android.hellotoast-1/base.apk > /sdcard/error.log\n");
-            //os.writeBytes("mv /data/app/com.instagram.android-1/base.apk /sdcard/instagram.apk\n");
-            //os.writeBytes("mv /sdcard/instagram.apk /data/app/com.instagram.android-1/base.apk\n");
-            //os.writeBytes("chmod u+rwx /data/app/com.instagram.android-1/base.apk\n");
-
-            os.writeBytes("exit\n");
-            os.flush();
-            try {
-                p.waitFor();
-                if (p.exitValue() != 255) {
-                    //Toast.makeText(activity_context.getApplicationContext()., "Root", Toast.LENGTH_LONG).show();
-                    return Boolean.TRUE;
-                } else {
-                    //Toast.makeText(MainActivity.this, "Not Root", Toast.LENGTH_LONG).show();
-                    return Boolean.FALSE;
-                }
-            } catch (InterruptedException e) {
-                //Toast.makeText(MainActivity.this, "Exception - Not Root", Toast.LENGTH_LONG).show();
-                return Boolean.FALSE;
-            }
-        } catch (IOException e) {
-            //Toast.makeText(MainActivity.this, "IOException - Not Root", Toast.LENGTH_LONG).show();
-            return Boolean.FALSE;
-        }
-    }
-
-
     /** Constructor **/
     public TransiencyManager(PackageManager pm, AppMetadataRoomDatabase db) {
         this.packageManager = pm;
@@ -115,7 +80,8 @@ public class TransiencyManager {
             if (DEMO_MODE) {
 
                 Log.d(LOG_TAG, "** DEBUG **   Package name " + packageName);
-                if (packageName.equals("com.example.android.hellotoast") || packageName.equals("com.facebook.katana")) {
+                if (packageName.equals("com.example.android.hellotoast") || packageName.equals("com.facebook.katana")
+                        || packageName.equals("com.snapchat.android") || packageName.equals("com.instagram.android")) {
                     tran = Boolean.TRUE;
                     Log.d(LOG_TAG, "** INFO **    " + packageName + " is transient!!");
                 }
@@ -190,19 +156,19 @@ public class TransiencyManager {
             DataOutputStream outputStream = new DataOutputStream(process.getOutputStream());
 
             // Get the path to the data folder for this package (remove base.apk from the path)
-            String packageDirectory = packageInfo.applicationInfo.sourceDir;
-            packageDirectory = packageDirectory.replace("base.apk", "");
+            String apkDirectory = packageInfo.applicationInfo.sourceDir;
+            //packageDirectory = packageDirectory.replace("base.apk", "");
 
             // Add Command -> Rename the dummy file to base.apk
-            outputStream.writeBytes("mv " + packageDirectory + "/dummy " + packageDirectory + "/base.apk\n");
+            //outputStream.writeBytes("mv " + packageDirectory + "/dummy " + packageDirectory + "/base.apk\n");
 
             // Add Command -> Set the permissions for this package
-            //  Enable: rwxr-xr-x
-            outputStream.writeBytes("chmod ga+rx " + packageDirectory + "\n");
+            //  Enable: rw-r--r--
+            outputStream.writeBytes("chmod uga+r " + apkDirectory + "\n");
 
             // Add command -> Set the owner for this package
             //  Enable: rwxr-xr-x system system com.package.example
-            outputStream.writeBytes("chown system.system " + packageDirectory + "\n");
+            //outputStream.writeBytes("chown system.system " + packageDirectory + "\n");
 
             // Add Command -> Exit the shell
             outputStream.writeBytes("exit\n");
@@ -271,19 +237,19 @@ public class TransiencyManager {
             DataOutputStream outputStream = new DataOutputStream(process.getOutputStream());
 
             // Get the path to the data folder of this package
-            String packageDirectory = packageInfo.applicationInfo.sourceDir;
-            packageDirectory = packageDirectory.replace("base.apk", "");
+            String apkDirectory = packageInfo.applicationInfo.sourceDir;
+            //packageDirectory = packageDirectory.replace("base.apk", "");
 
             // Add Command -> Rename the base.apk file to dummy
-            outputStream.writeBytes("mv " + packageDirectory + "/base.apk " + packageDirectory + "/dummy\n");
+            //outputStream.writeBytes("mv " + packageDirectory + "/base.apk " + packageDirectory + "/dummy\n");
 
             // Add Command -> Set the permissions for this package
-            //  Disable: rwx------
-            outputStream.writeBytes("chmod ga-rwx " + packageDirectory + "\n");
+            //  Disable: -w-------
+            outputStream.writeBytes("chmod uga-r " + apkDirectory + "\n");
 
             // Add Command -> Set the owner for this package
             //  Disable: rwx------ root root com.package.example
-            outputStream.writeBytes("chwon root.root " + packageDirectory + "\n");
+            //outputStream.writeBytes("chwon root.root " + packageDirectory + "\n");
 
             // Add Command -> Exit the shell
             outputStream.writeBytes("exit\n");
@@ -390,7 +356,7 @@ public class TransiencyManager {
 
                     Log.d(LOG_TAG, "** INFO **   " + line + " is running");
                 } else {
-                    Log.d(LOG_TAG, "** INFO **   NON-MATCH - " + line + " is also running...");
+                    //Log.d(LOG_TAG, "** INFO **   NON-MATCH - " + line + " is also running...");
                 }
             }
 
