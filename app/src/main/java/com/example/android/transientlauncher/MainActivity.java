@@ -1,7 +1,14 @@
 package com.example.android.transientlauncher;
 
+import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,6 +19,11 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.baoyz.swipemenulistview.SwipeMenu;
+import com.baoyz.swipemenulistview.SwipeMenuCreator;
+import com.baoyz.swipemenulistview.SwipeMenuItem;
+import com.baoyz.swipemenulistview.SwipeMenuListView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +43,8 @@ public class MainActivity extends AppCompatActivity {
 
     // Structures
     private List<AppMetadata> appList;
-    private ListView listView;
+    private SwipeMenuListView listView;
+    private SwipeMenuCreator mMenuCreator;
 
 
 
@@ -55,6 +68,50 @@ public class MainActivity extends AppCompatActivity {
         // Instantiate Transiency Manager
         transiencyManager = new TransiencyManager(packageManager, database);
 
+        mMenuCreator = new SwipeMenuCreator() {
+
+            @Override
+            public void create(SwipeMenu menu) {
+
+                // create "delete" item
+                SwipeMenuItem deleteItem = new SwipeMenuItem(
+                        getApplicationContext());
+                // set item background
+                deleteItem.setBackground(new ColorDrawable(Color.rgb(0xF9,
+                        0x3F, 0x25)));
+                // set item width
+                deleteItem.setWidth(200);
+                // set a icon
+                deleteItem.setIcon(R.drawable.ic_disable);
+                // add to menu
+                menu.addMenuItem(deleteItem);
+            }
+        };
+
+        BroadcastReceiver powerOffReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                // Get updated app list
+                appList.clear();
+                appList.addAll(database.getAllApps());
+
+                // Enable all disabled apps before turning off the phone
+                for (AppMetadata app: appList) {
+                    if (app.getEnabledApp() == Boolean.FALSE) {
+                        transiencyManager.enableApp(app.getPackageName());
+                        transiencyManager.setAppDisabled(app.getPackageName());
+                        Log.d(LOG_TAG, "Enabling App " + app.getPackageName() + " on Shutdown!");
+                    }
+                }
+
+            }
+        };
+
+        IntentFilter powerOffFilter = new IntentFilter();
+        powerOffFilter.addAction("android.intent.action.ACTION_SHUTDOWN");
+        powerOffFilter.addAction("android.intent.action.QUICKBOOT_POWEROFF");
+
+        this.getApplicationContext().registerReceiver(powerOffReceiver, powerOffFilter);
     }
 
 
@@ -229,8 +286,10 @@ public class MainActivity extends AppCompatActivity {
         };
 
         // Setup a ListView to display the apps, and display them in the ListView list_apps object
-        listView = findViewById(R.id.list_apps);
+        listView = (SwipeMenuListView) findViewById(R.id.list_apps);
         listView.setAdapter(adapter);
+        listView.setMenuCreator(mMenuCreator);
+        listView.setSwipeDirection(SwipeMenuListView.DIRECTION_RIGHT);
     }
 
 
@@ -272,6 +331,60 @@ public class MainActivity extends AppCompatActivity {
                 // Run the app
                 Intent intent = packageManager.getLaunchIntentForPackage(packageName);
                 MainActivity.this.startActivity(intent);
+
+                //Read App's permissions and give the user a warning of what it can do
+                try {
+                    String permissionWarning = "This application requires the permissions:";
+                    PackageInfo info = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
+
+                    if (info.requestedPermissions != null) {
+
+                        for (String permission : info.requestedPermissions){
+                            permissionWarning = permissionWarning + "\n" + permission;
+                        }
+
+                    }
+
+                    else {
+                        permissionWarning = "This app requests no permissions!";
+                    }
+
+                    Toast.makeText(MainActivity.this, permissionWarning, Toast.LENGTH_LONG).show();
+                }
+                catch(Exception e){
+                    Log.e(LOG_TAG, e.getMessage());
+                }
+            }
+        });
+
+        listView.setOnMenuItemClickListener(new SwipeMenuListView.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(int position, SwipeMenu menu, int index) {
+
+                AppMetadata app = appList.get(position);
+
+                String packageName = app.getPackageName();
+                Log.d(LOG_TAG, "User swiped to reveal the close button on app " + packageName);
+
+                if( app.getTransientApp() == Boolean.TRUE ) {
+
+                    //Kill any activity related to this app using the package name
+                    ActivityManager mActivityManager = (ActivityManager) MainActivity.this.getSystemService(Context.ACTIVITY_SERVICE);
+                    mActivityManager.killBackgroundProcesses(packageName);
+
+                    //Disable the package to prevent it from running until enabled through launcher
+                    Boolean disable_success = transiencyManager.disableApp(packageName);
+
+
+                    if(disable_success){
+                        app.setEnabledApp(Boolean.FALSE);
+                        Log.d(LOG_TAG, "App Successfully Disabled!");
+                        Toast.makeText(MainActivity.this, "Exited and Disabled App: " + packageName, Toast.LENGTH_LONG).show();
+                    }
+                }
+
+
+                return false;
             }
         });
     }

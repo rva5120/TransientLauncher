@@ -307,7 +307,7 @@ public class TransiencyManager {
     Name                setAppDisabled
     Description         Sets the enabled flag to FALSE in the database for a given app
      */
-    private void setAppDisabled(String packageName) {
+    void setAppDisabled(String packageName) {
 
         // Update the database
         database.updateAppEnabled(packageName, Boolean.FALSE);

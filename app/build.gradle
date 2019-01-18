@@ -32,4 +32,6 @@ dependencies {
     // Lifecycle Components
     implementation "android.arch.lifecycle:extensions:$archLifecycleVersion"
     annotationProcessor "android.arch.lifecycle:compiler:$archLifecycleVersion"
+
+    implementation ('com.baoyz.swipemenulistview:library:1.3.0') { exclude group: 'com.android.support' exclude module: 'appcompat-v7' exclude module: 'support-v4' }
 }
