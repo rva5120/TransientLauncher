@@ -1,6 +1,7 @@
 package com.example.android.transientlauncher;
 
 import android.arch.persistence.room.Dao;
+import android.arch.persistence.room.Delete;
 import android.arch.persistence.room.Insert;
 import android.arch.persistence.room.OnConflictStrategy;
 import android.arch.persistence.room.Query;
@@ -23,6 +24,10 @@ public interface AppMetadataDao {
     // Delete all entries from the table
     @Query("DELETE FROM apps_table")
     void deleteAll();
+
+    //Delete a single item
+    @Delete
+    void delete(AppMetadata app);
 
     // Get all entries from the table
     @Query("SELECT * FROM apps_table")

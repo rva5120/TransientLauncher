@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -27,6 +28,10 @@ import com.baoyz.swipemenulistview.SwipeMenuListView;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static android.content.Intent.ACTION_PACKAGE_ADDED;
+import static android.content.Intent.ACTION_PACKAGE_REMOVED;
+import static android.content.Intent.EXTRA_PACKAGE_NAME;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -80,11 +85,32 @@ public class MainActivity extends AppCompatActivity {
                 deleteItem.setBackground(new ColorDrawable(Color.rgb(0xF9,
                         0x3F, 0x25)));
                 // set item width
-                deleteItem.setWidth(200);
+                deleteItem.setWidth(175);
                 // set a icon
                 deleteItem.setIcon(R.drawable.ic_disable);
+
+                // create padding button
+                SwipeMenuItem padding = new SwipeMenuItem(
+                        getApplicationContext());
+                padding.setWidth(7);
+
+                // create "info" item
+                SwipeMenuItem infoItem = new SwipeMenuItem(
+                        getApplicationContext());
+                // set item background
+                infoItem.setBackground(new ColorDrawable(Color.rgb(0x00,
+                        0xCC, 0xFF)));
+                // set item width
+                infoItem.setWidth(175);
+                // set a icon
+                infoItem.setIcon(R.drawable.ic_info);
+
+
                 // add to menu
                 menu.addMenuItem(deleteItem);
+                menu.addMenuItem(padding);
+                menu.addMenuItem(infoItem);
+
             }
         };
 
@@ -99,7 +125,6 @@ public class MainActivity extends AppCompatActivity {
                 for (AppMetadata app: appList) {
                     if (app.getEnabledApp() == Boolean.FALSE) {
                         transiencyManager.enableApp(app.getPackageName());
-                        transiencyManager.setAppDisabled(app.getPackageName());
                         Log.d(LOG_TAG, "Enabling App " + app.getPackageName() + " on Shutdown!");
                     }
                 }
@@ -112,6 +137,56 @@ public class MainActivity extends AppCompatActivity {
         powerOffFilter.addAction("android.intent.action.QUICKBOOT_POWEROFF");
 
         this.getApplicationContext().registerReceiver(powerOffReceiver, powerOffFilter);
+
+        BroadcastReceiver appAddedOrRemovedReceiver = new BroadcastReceiver() {
+
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+                String packageName = intent.getData().toString().substring(8);
+                String name = "";
+
+                try {
+                    ApplicationInfo thisApp = packageManager.getApplicationInfo(packageName, 0);
+                    name = packageManager.getApplicationLabel(thisApp).toString();
+                } catch (final PackageManager.NameNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+                AppMetadata app = new AppMetadata(name, packageName, Boolean.TRUE, transiencyManager.isAppTransient(packageName));
+
+                //if installing, add the package to the list and the database
+                if( intent.getAction().equals(ACTION_PACKAGE_ADDED) ) {
+
+                    database.insertApp(app);
+                    appList.add(app);
+
+                }
+
+                //if uninstalling, remove the corresponding package from the list
+                else if( intent.getAction().equals(ACTION_PACKAGE_REMOVED) ) {
+                    appList.remove(app);
+
+                    database.deleteApp(app);
+
+                }
+
+                //app is being updated, check the database and either enable or disable
+                else{
+
+                }
+            }
+        };
+
+        IntentFilter appAddedOrRemovedFilter = new IntentFilter();
+        appAddedOrRemovedFilter.addDataScheme("package");
+        appAddedOrRemovedFilter.addAction(ACTION_PACKAGE_ADDED);
+        appAddedOrRemovedFilter.addAction(ACTION_PACKAGE_REMOVED);
+        appAddedOrRemovedFilter.addAction(Intent.ACTION_PACKAGE_CHANGED);
+
+
+
+        this.getApplicationContext().registerReceiver(appAddedOrRemovedReceiver, appAddedOrRemovedFilter);
     }
 
 
@@ -238,19 +313,11 @@ public class MainActivity extends AppCompatActivity {
 
         } else {
 
-            // Consult the added/removed packages file from the background process
-
-            // Add/Remove apps to/from the database
-
             // Load all (new and existing) apps to display to the user
             appList.addAll(database.getAllApps());
 
             // Wait for the background DB process to be done...
         }
-
-        // Get the most up to date list from the DB
-        appList.addAll(database.getAllApps());
-
     }
 
 
@@ -302,56 +369,39 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-                // Get the package name & transient flag of the desired app
-                String packageName = appList.get(position).getPackageName();
-                Boolean transientApp = appList.get(position).getTransientApp();
-
-                Log.d(LOG_TAG, "** INFO **   Servicing user click on " + packageName);
-
-                // Display a helpful Toast
-                if (transientApp) {
-                    Toast.makeText(MainActivity.this, "Opening Transient App!", Toast.LENGTH_LONG).show();
-                } else {
-                    Toast.makeText(MainActivity.this, "Opening a NON-Transient App..", Toast.LENGTH_LONG).show();
-                }
-
-                // Enable the app if necessary
-                Boolean enable_success;
-                if (transiencyManager.isAppDisabled(packageName)) {
-                    enable_success = transiencyManager.enableApp(packageName);
-                    if (enable_success) {
-                        appList.get(position).setEnabledApp(Boolean.TRUE);
-                    } else {
-                        Toast.makeText(MainActivity.this, "Error opening transient app... Exiting Launcher.", Toast.LENGTH_LONG).show();
-                        Log.e(LOG_TAG, "* ERROR *   Couldn't enable " + packageName);
-                        MainActivity.this.finish();
-                    }
-                }
-
-                // Run the app
-                Intent intent = packageManager.getLaunchIntentForPackage(packageName);
-                MainActivity.this.startActivity(intent);
-
-                //Read App's permissions and give the user a warning of what it can do
                 try {
-                    String permissionWarning = "This application requires the permissions:";
-                    PackageInfo info = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
+                    // Get the package name & transient flag of the desired app
+                    String packageName = appList.get(position).getPackageName();
+                    Boolean transientApp = appList.get(position).getTransientApp();
 
-                    if (info.requestedPermissions != null) {
+                    Log.d(LOG_TAG, "** INFO **   Servicing user click on " + packageName);
 
-                        for (String permission : info.requestedPermissions){
-                            permissionWarning = permissionWarning + "\n" + permission;
+                    // Enable the app if necessary
+                    Boolean enable_success;
+                    if (transiencyManager.isAppDisabled(packageName)) {
+                        enable_success = transiencyManager.enableApp(packageName);
+                        if (enable_success) {
+                            appList.get(position).setEnabledApp(Boolean.TRUE);
+
+                            // Display a helpful Toast
+                            if (transientApp) {
+                                Toast.makeText(MainActivity.this, "Opening Transient App!", Toast.LENGTH_LONG).show();
+                            } else {
+                                Toast.makeText(MainActivity.this, "Opening a NON-Transient App..", Toast.LENGTH_LONG).show();
+                            }
+
+                        } else {
+                            Toast.makeText(MainActivity.this, "Error opening transient app... Exiting Launcher.", Toast.LENGTH_LONG).show();
+                            Log.e(LOG_TAG, "* ERROR *   Couldn't enable " + packageName);
+                            MainActivity.this.finish();
                         }
-
                     }
 
-                    else {
-                        permissionWarning = "This app requests no permissions!";
-                    }
-
-                    Toast.makeText(MainActivity.this, permissionWarning, Toast.LENGTH_LONG).show();
+                    // Run the app
+                    Intent intent = packageManager.getLaunchIntentForPackage(packageName);
+                    MainActivity.this.startActivity(intent);
                 }
-                catch(Exception e){
+                catch (Exception e){
                     Log.e(LOG_TAG, e.getMessage());
                 }
             }
@@ -364,22 +414,50 @@ public class MainActivity extends AppCompatActivity {
                 AppMetadata app = appList.get(position);
 
                 String packageName = app.getPackageName();
-                Log.d(LOG_TAG, "User swiped to reveal the close button on app " + packageName);
+                Log.d(LOG_TAG, "User swiped to reveal the buttons on app " + packageName);
 
-                if( app.getTransientApp() == Boolean.TRUE ) {
+                if(index == 0) {
 
                     //Kill any activity related to this app using the package name
                     ActivityManager mActivityManager = (ActivityManager) MainActivity.this.getSystemService(Context.ACTIVITY_SERVICE);
                     mActivityManager.killBackgroundProcesses(packageName);
 
-                    //Disable the package to prevent it from running until enabled through launcher
-                    Boolean disable_success = transiencyManager.disableApp(packageName);
+                    if (app.getTransientApp() == Boolean.TRUE) {
+                        //Disable the package to prevent it from running until enabled through launcher
+                        Boolean disable_success = transiencyManager.disableApp(packageName);
 
 
-                    if(disable_success){
-                        app.setEnabledApp(Boolean.FALSE);
-                        Log.d(LOG_TAG, "App Successfully Disabled!");
-                        Toast.makeText(MainActivity.this, "Exited and Disabled App: " + packageName, Toast.LENGTH_LONG).show();
+                        if (disable_success) {
+                            app.setEnabledApp(Boolean.FALSE);
+                            Log.d(LOG_TAG, "App Successfully Disabled!");
+                            Toast.makeText(MainActivity.this, "Exited and Disabled App: " + packageName, Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }
+                //info button is pressed
+                else {
+
+                    //Read App's permissions and give the user a warning of what it can do
+                    try {
+                        String permissionWarning = "This application requires the permissions:";
+                        PackageInfo info = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
+
+                        if (info.requestedPermissions != null) {
+
+                            for (String permission : info.requestedPermissions){
+                                permissionWarning = permissionWarning + "\n" + permission;
+                            }
+
+                        }
+
+                        else {
+                            permissionWarning = "This app requests no permissions!";
+                        }
+
+                        Toast.makeText(MainActivity.this, permissionWarning, Toast.LENGTH_LONG).show();
+                    }
+                    catch(Exception e){
+                        Log.e(LOG_TAG, e.getMessage());
                     }
                 }
 

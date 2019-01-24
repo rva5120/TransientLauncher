@@ -86,14 +86,9 @@ public class TransiencyManager {
                     Log.d(LOG_TAG, "** INFO **    " + packageName + " is transient!!");
                 }
 
-            } else {
-
-                if (packageName.contains("com.google") || packageName.contains("com.android") || packageName.contains("transientlauncher")) {
-                    tran = Boolean.FALSE;
-                } else {
-                    tran = Boolean.TRUE;
-                }
-
+            }
+            else {
+                tran  = isAppTransient(packageName);
             }
 
             // Create the app object
@@ -295,7 +290,7 @@ public class TransiencyManager {
     Name                setAppEnabled
     Description         Sets the enabled flag to TRUE in the database for a given app
      */
-    private void setAppEnabled(String packageName) {
+    void setAppEnabled(String packageName) {
 
         // Update the database
         database.updateAppEnabled(packageName, Boolean.TRUE);
@@ -373,7 +368,6 @@ public class TransiencyManager {
     }
 
 
-
     /*
     Name                isAppRunning
     Description         Checks if the app is running, using the "ps" command
@@ -389,4 +383,18 @@ public class TransiencyManager {
         // Check to see if this package is running
         return runningPackages.contains(packageName);
     }
+
+    /*
+    Name                isAppRunning
+    Description         Checks if the app is running, using the "ps" command
+     */
+    public Boolean isAppTransient(String packageName) {
+        if (packageName.contains("com.google") || packageName.contains("com.android") || packageName.contains("transientlauncher")) {
+            return Boolean.FALSE;
+        } else {
+            return Boolean.TRUE;
+        }
+    }
+
+
 }

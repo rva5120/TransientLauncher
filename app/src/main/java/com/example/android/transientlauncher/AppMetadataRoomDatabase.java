@@ -123,6 +123,32 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
         }
     }
 
+    /*
+    Name                DeleteAppFromDbAsync
+    Description         Delete an app from the DB
+    */
+    private static class DeleteAppFromDbAsync extends AsyncTask<Void, Void, Void> {
+
+        // Attributes
+        private final AppMetadataDao mDao;
+        private AppMetadata app;
+
+        // Constructor
+        DeleteAppFromDbAsync(AppMetadata app, AppMetadataRoomDatabase db) {
+            mDao = db.appMetadataDao();
+            this.app = app;
+        }
+
+        // Methods
+        @Override
+        protected Void doInBackground(final Void... params) {
+            mDao.delete(app);
+            return null;
+        }
+    }
+
+
+
 
     /*
     Name                RecordCountDbAsync
@@ -293,6 +319,20 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
             new InsertAppToDbAsync(app, INSTANCE).execute();
         } else {
             INSTANCE.appMetadataDao().insert(app);
+        }
+    }
+
+    /*
+    Name                insertApp
+    Description         Insert an app in the DB
+     */
+    void deleteApp(AppMetadata app) {
+
+        if (DEMO_MODE) {
+            // Insert app
+            new DeleteAppFromDbAsync(app, INSTANCE).execute();
+        } else {
+            INSTANCE.appMetadataDao().delete(app);
         }
     }
 
