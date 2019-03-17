@@ -75,7 +75,8 @@ public class MainActivity extends AppCompatActivity {
         // Load apps from DB or PM on list, and disables closed apps if first time running
         loadAppsOnLocalList();
 
-        // DEMO MODE - Disable all apps that are not running.
+        // DEMO MODE - Disable all apps that are not running. -- not using ps anymore
+        /*
         if (DEMO_MODE) {
             for(AppMetadata app: appList) {
 
@@ -94,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+        */
 
         // Load list of apps on the ListView object
         loadAppsOnListView();
@@ -186,13 +188,15 @@ public class MainActivity extends AppCompatActivity {
             // Add/Remove apps to/from the database
 
             // Load all (new and existing) apps to display to the user
-            appList.addAll(database.getAllApps());
+            //OLD - appList.addAll(database.getAllApps());
+            appList.addAll(transiencyManager.getLaunchableAppsFromDb());
 
             // Wait for the background DB process to be done...
         }
 
         // Get the most up to date list from the DB
-        appList.addAll(database.getAllApps());
+        //appList.addAll(database.getAllApps());
+        appList.addAll(transiencyManager.getLaunchableAppsFromDb());
 
     }
 
@@ -239,9 +243,14 @@ public class MainActivity extends AppCompatActivity {
     Description         Setup a listener to open the selected app from the ListView
      */
     private void addClickListener() {
+
+        // Short click -> open app
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                // Time it takes to enable the app
+                // Start time
 
                 // Get the package name & transient flag of the desired app
                 String packageName = appList.get(position).getPackageName();
@@ -256,12 +265,16 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Opening a NON-Transient App..", Toast.LENGTH_LONG).show();
                 }
 
+                long start_time = 0;
+                long end_time = 0;
                 // Enable the app if necessary
                 Boolean enable_success;
                 if (transiencyManager.isAppDisabled(packageName)) {
                     enable_success = transiencyManager.enableApp(packageName);
                     if (enable_success) {
+                        start_time = System.nanoTime();
                         appList.get(position).setEnabledApp(Boolean.TRUE);
+                        end_time = System.nanoTime();
                     } else {
                         Toast.makeText(MainActivity.this, "Error opening transient app... Exiting Launcher.", Toast.LENGTH_LONG).show();
                         Log.e(LOG_TAG, "* ERROR *   Couldn't enable " + packageName);
@@ -269,9 +282,43 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
+                // End time
+                long total_time = end_time - start_time;
+                Log.d(LOG_TAG, "MEASURING OVERHEAD: " + total_time + " ns");
+
                 // Run the app
                 Intent intent = packageManager.getLaunchIntentForPackage(packageName);
                 MainActivity.this.startActivity(intent);
+            }
+        });
+
+        // Long click -> close app
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+
+                // Get Package Name
+                String packageName = appList.get(position).getPackageName();
+                String appName = appList.get(position).getAppName();
+                Boolean transientApp = appList.get(position).getTransientApp();
+
+                if (transientApp && transiencyManager.isAppDisabled(packageName) == Boolean.FALSE) {
+                    Boolean success = transiencyManager.disableApp(packageName);
+
+                    if (success) {
+                        Toast.makeText(MainActivity.this, "Closed " + appName + ".", Toast.LENGTH_SHORT).show();
+                    }
+
+                    // Update the list to reflect the app being disabled
+                    AppMetadata meta = appList.get(position);
+                    meta.setEnabledApp(Boolean.FALSE);
+                    appList.set(position, meta);
+
+                } else {
+                    Toast.makeText(MainActivity.this, "Already closed!", Toast.LENGTH_SHORT).show();
+                }
+
+                return true;
             }
         });
     }
@@ -285,7 +332,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Get updated app list
         appList.clear();
-        appList.addAll(database.getAllApps());
+        //appList.addAll(database.getAllApps());
+        appList.addAll(transiencyManager.getLaunchableAppsFromDb());
 
         // Enable all disabled apps
         for (AppMetadata app: appList) {

@@ -52,7 +52,7 @@ public class TransiencyManager {
 
     /** Methods **/
     /*
-    Name                getLaunchableApps
+    Name                getLaunchableAppsAndLoadDb
     Description         Returns a list of AppMetadata objects of launchable apps and add them to the DB
      */
     public List<AppMetadata> getLaunchableAppsAndLoadDb() {
@@ -81,7 +81,8 @@ public class TransiencyManager {
 
                 Log.d(LOG_TAG, "** DEBUG **   Package name " + packageName);
                 if (packageName.equals("com.example.android.hellotoast") || packageName.equals("com.facebook.katana")
-                        || packageName.equals("com.snapchat.android") || packageName.equals("com.instagram.android")) {
+                        || packageName.equals("com.snapchat.android") || packageName.equals("com.instagram.android")
+                        || packageName.equals("com.example.android.metis")) {
                     tran = Boolean.TRUE;
                     Log.d(LOG_TAG, "** INFO **    " + packageName + " is transient!!");
                 }
@@ -114,7 +115,17 @@ public class TransiencyManager {
 
 
     /*
-    Name                isAppEnabled
+    Name                getLauchableAppsFromDB
+    Description         Queries the DB to get the list of launchable apps
+     */
+    public List<AppMetadata> getLaunchableAppsFromDb() {
+        return database.getAllApps();
+    }
+
+
+
+    /*
+    Name                isAppDisabled
     Description         Returns TRUE if the enabled flag is set in the DB for a given app
      */
     public Boolean isAppDisabled(String packageName) {
