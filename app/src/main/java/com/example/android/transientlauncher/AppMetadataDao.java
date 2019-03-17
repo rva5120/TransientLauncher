@@ -43,4 +43,8 @@ public interface AppMetadataDao {
     // Get the enabled/transient flag value for a given package name
     @Query("SELECT :recordType FROM apps_table WHERE packageName=:name")
     Boolean getBooleanRecordField(String name, String recordType);
+
+    // Get record
+    @Query("SELECT * from apps_table WHERE packageName=:name")
+    AppMetadata getRecord(String name);
 }

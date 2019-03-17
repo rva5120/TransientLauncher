@@ -362,6 +362,9 @@ abstract class AppMetadataRoomDatabase extends RoomDatabase {
             new GetRecordFieldDbAsync(INSTANCE, packageName, "enabledApp").execute();
         }
 
-        return recordBooleanResult;
+        // Debug
+        AppMetadata app = INSTANCE.appMetadataDao().getRecord(packageName);
+        return app.getEnabledApp();
+        //return recordBooleanResult;
     }
 }

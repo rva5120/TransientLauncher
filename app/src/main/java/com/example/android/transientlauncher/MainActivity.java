@@ -1,5 +1,7 @@
 package com.example.android.transientlauncher;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.support.v7.app.AppCompatActivity;
@@ -13,6 +15,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,6 +59,24 @@ public class MainActivity extends AppCompatActivity {
 
         // Instantiate Transiency Manager
         transiencyManager = new TransiencyManager(packageManager, database);
+
+        // Sudo
+        try {
+            Process process = Runtime.getRuntime().exec("su");
+            OutputStream out = process.getOutputStream();
+            //process.waitFor();
+            /*
+            if (process.exitValue() != 255) {
+                Toast.makeText(MainActivity.this, "Sudo granted!", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(MainActivity.this, "Error.......!", Toast.LENGTH_LONG).show();
+            }
+            */
+        } catch (IOException e) {
+            e.printStackTrace();
+        } /*catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
 
     }
 
@@ -112,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "** INFO **    onDestroy --> Disables all apps that are not running.");
 
         // DEMO MODE - Disable apps that are not running and are still enabled
+        /*
         if (DEMO_MODE && enabledAllSelected == Boolean.FALSE) {
 
             for (AppMetadata app : appList) {
@@ -132,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+        */
 
         // TO DO [Start the background process to listen for closing apps]
     }
@@ -159,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(LOG_TAG, "** DEBUG ** DATABASE SHOULD NOW HAVE 2 ITEMS... " + database.getRecordCount());
 
             // Since this is the first time that the launcher is used, disable apps that are not running
+            /*
             Boolean disable_success;
             for (int pos = 0; pos < appList.size(); pos++) {
 
@@ -167,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(LOG_TAG, "** DEBUG **    Disable? " + app.getAppName() + " -- Transient? " + app.getTransientApp());
 
                 // Disable transient apps that are not running
+
                 if (app.getTransientApp() == Boolean.TRUE && transiencyManager.isAppRunning(app.getPackageName()) == Boolean.FALSE) {
                     disable_success = transiencyManager.disableApp(app.getPackageName());
                     if (disable_success) {
@@ -179,7 +206,9 @@ public class MainActivity extends AppCompatActivity {
                         MainActivity.this.finish();
                     }
                 }
+
             }
+            */
 
         } else {
 
@@ -195,8 +224,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Get the most up to date list from the DB
+        //appList = new... otherwise this will repeat the number of entries!!!!!
         //appList.addAll(database.getAllApps());
-        appList.addAll(transiencyManager.getLaunchableAppsFromDb());
+        //appList.addAll(transiencyManager.getLaunchableAppsFromDb());
 
     }
 
@@ -249,9 +279,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-                // Time it takes to enable the app
-                // Start time
-
                 // Get the package name & transient flag of the desired app
                 String packageName = appList.get(position).getPackageName();
                 Boolean transientApp = appList.get(position).getTransientApp();
@@ -265,26 +292,23 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Opening a NON-Transient App..", Toast.LENGTH_LONG).show();
                 }
 
-                long start_time = 0;
-                long end_time = 0;
+                Toast.makeText(MainActivity.this, "DEBUG - This app is enabled (local list): " + appList.get(position).getEnabledApp(), Toast.LENGTH_LONG).show();
+
                 // Enable the app if necessary
                 Boolean enable_success;
-                if (transiencyManager.isAppDisabled(packageName)) {
+                if (transiencyManager.isAppDisabled(packageName) == Boolean.TRUE) {
                     enable_success = transiencyManager.enableApp(packageName);
                     if (enable_success) {
-                        start_time = System.nanoTime();
-                        appList.get(position).setEnabledApp(Boolean.TRUE);
-                        end_time = System.nanoTime();
+                        AppMetadata meta = appList.get(position);
+                        meta.setEnabledApp(Boolean.FALSE);
+                        appList.set(position, meta);
+                        Toast.makeText(MainActivity.this, "Success enabling app!", Toast.LENGTH_LONG).show();
                     } else {
                         Toast.makeText(MainActivity.this, "Error opening transient app... Exiting Launcher.", Toast.LENGTH_LONG).show();
                         Log.e(LOG_TAG, "* ERROR *   Couldn't enable " + packageName);
                         MainActivity.this.finish();
                     }
                 }
-
-                // End time
-                long total_time = end_time - start_time;
-                Log.d(LOG_TAG, "MEASURING OVERHEAD: " + total_time + " ns");
 
                 // Run the app
                 Intent intent = packageManager.getLaunchIntentForPackage(packageName);
@@ -300,9 +324,14 @@ public class MainActivity extends AppCompatActivity {
                 // Get Package Name
                 String packageName = appList.get(position).getPackageName();
                 String appName = appList.get(position).getAppName();
-                Boolean transientApp = appList.get(position).getTransientApp();
+                //Boolean transientApp = appList.get(position).getTransientApp();
 
-                if (transientApp && transiencyManager.isAppDisabled(packageName) == Boolean.FALSE) {
+                if (transiencyManager.isAppDisabled(packageName) == Boolean.FALSE) {
+
+                    // Kill background processes of the app
+                    //ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
+                    //am.killBackgroundProcesses(packageName);
+
                     Boolean success = transiencyManager.disableApp(packageName);
 
                     if (success) {

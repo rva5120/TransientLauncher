@@ -5,6 +5,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -82,7 +83,7 @@ public class TransiencyManager {
                 Log.d(LOG_TAG, "** DEBUG **   Package name " + packageName);
                 if (packageName.equals("com.example.android.hellotoast") || packageName.equals("com.facebook.katana")
                         || packageName.equals("com.snapchat.android") || packageName.equals("com.instagram.android")
-                        || packageName.equals("com.example.android.metis")) {
+                        || packageName.equals("com.example.android.metis") || packageName.equals("com.NikSanTech.FireDots3D")) {
                     tran = Boolean.TRUE;
                     Log.d(LOG_TAG, "** INFO **    " + packageName + " is transient!!");
                 }
@@ -157,9 +158,15 @@ public class TransiencyManager {
             return Boolean.FALSE;
         }
 
+
         // Get into a sudo shell & execute the enabling commands
         Process process;
         try {
+            // Performance Metric - Start Time
+            long start_time = 0;
+            long end_time = 0;
+            start_time = System.nanoTime();
+
             // Start sudo shell
             process = Runtime.getRuntime().exec("su");
 
@@ -186,6 +193,11 @@ public class TransiencyManager {
 
             // Execute the commands
             outputStream.flush();
+
+            // Performance Metric - End time
+            end_time = System.nanoTime();
+            long total_time = end_time - start_time;
+            Log.d(LOG_TAG, "MEASURING OVERHEAD: " + total_time + " ns");
 
             // Check the output of the execution
             try {
