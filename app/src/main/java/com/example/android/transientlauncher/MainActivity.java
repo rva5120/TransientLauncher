@@ -329,8 +329,8 @@ public class MainActivity extends AppCompatActivity {
                 if (transiencyManager.isAppDisabled(packageName) == Boolean.FALSE) {
 
                     // Kill background processes of the app
-                    //ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
-                    //am.killBackgroundProcesses(packageName);
+                    ActivityManager am = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
+                    am.killBackgroundProcesses(packageName);
 
                     Boolean success = transiencyManager.disableApp(packageName);
 
